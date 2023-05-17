@@ -19,4 +19,4 @@ Route::get('/', function () {
 });
 
 Route::get('/repos', [GithubController::class, 'index']);
-
+Route::get('/selectedRepo', [GithubController::class, 'openRepo'])->name('callControllerMethod');
