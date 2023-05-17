@@ -27,7 +27,4 @@
         <div>{{$repos->message}}</div>
     @endif
 
-
-
-
 @endsection
