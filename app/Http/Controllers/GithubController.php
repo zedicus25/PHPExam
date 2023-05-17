@@ -11,6 +11,7 @@ use function PHPUnit\Framework\exactly;
 
 class GithubController extends Controller
 {
+    public int $page = 1;
     public function index(Request $request)
     {
         $userName = $request->input('userName');
@@ -19,18 +20,70 @@ class GithubController extends Controller
             echo "Dont find!";
             return view('repos', ['repos' => array()]);
         }
-
-        $repos = $this->getRepos($userName);
+        session(['page' => 1]);
+        $repos = $this->getRepos($userName,1);
 
         return view('repos', ['repos' => $repos]);
     }
 
-    public function getRepos(string $userName) {
-        $url = "https://api.github.com/users/$userName/repos";
 
+
+    public function getRepos(string $userName, $page) {
+        $url = "https://api.github.com/users/$userName/repos?page={$page}";
+        $key = env('GITHUB_TOKEN');
         return json_decode(Http::withHeaders([
-            'Authorization' => 'Bearer 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'
+            'Authorization' => "Bearer $key"
         ])->get($url));
+    }
+
+    public function goToNextPage(Request $request)
+    {
+        $userName = $request->input('userName');
+
+        if($userName == null){
+            echo "Dont find!";
+            return view('repos', ['repos' => array()]);
+        }
+
+        $page = session('page');
+        if($page == null){
+            $page = 1;
+            session(['page' => 1]);
+        }
+        else{
+            $page = $page + 1;
+            session(['page' => $page]);
+        }
+
+        $repos = $this->getRepos($userName, $page);
+
+        return view('repos', ['repos' => $repos]);
+    }
+
+    public function goToPreviousPage(Request $request)
+    {
+        $userName = $request->input('userName');
+
+        if($userName == null){
+            echo "Dont find!";
+            return view('repos', ['repos' => array()]);
+        }
+
+        $page = session('page');
+        if($page == null){
+            $page = 1;
+            session(['page' => 1]);
+        }
+        else{
+            if($page > 1){
+                $page = $page - 1;
+                session(['page' => $page]);
+            }
+        }
+
+        $repos = $this->getRepos($userName,$page);
+
+        return view('repos', ['repos' => $repos]);
     }
 
     public function openRepo(Request $request)
@@ -39,8 +92,9 @@ class GithubController extends Controller
         $path = $request->query('path');;
         $userName = $request->query('userName');;
         $url = "https://api.github.com/repos/$userName/$repo/contents/$path";
+        $key = env('GITHUB_TOKEN');
         $files = json_decode(Http::withHeaders([
-            'Authorization' => 'Bearer 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'
+            'Authorization' => "Bearer $key"
         ])->get($url));
         return view('selectedRepo')->with('files', ['content' => $files, 'repoName'=> $repo, 'userName'=>$userName]);
     }
@@ -64,20 +118,33 @@ class GithubController extends Controller
         $zip = new ZipArchive();
         if ($zip->open($zipFile, ZipArchive::CREATE) === true) {
             $client = new Client();
+            if(array_key_exists('name', $files))
+            {
+                $response = $client->get($files['download_url']);
 
-            foreach ($files as $item) {
+                $fileName = $files['name'];
+                $fileContent = $response->getBody()->getContents();
 
-                if ($item['type']== 'dir') {
-                    $this->addFolderToZip($item, $zip, $client);
-                } else {
-                    $response = $client->get($item['download_url']);
+                $zip->addFromString($fileName, $fileContent);
+            }
+            else
+            {
+                foreach ($files as $item)
+                {
+                    if ($item['type'] == 'dir') {
+                        $this->addFolderToZip($item, $zip, $client);
+                    } else {
+                        $response = $client->get($item['download_url']);
 
-                    $fileName = $item['name'];
-                    $fileContent = $response->getBody()->getContents();
+                        $fileName = $item['name'];
+                        $fileContent = $response->getBody()->getContents();
 
-                    $zip->addFromString($fileName, $fileContent);
+                        $zip->addFromString($fileName, $fileContent);
+                    }
                 }
             }
+
+
 
             $zip->close();
             return response()->download($zipFile);
@@ -88,8 +155,9 @@ class GithubController extends Controller
 
     private function addFolderToZip($folder, $zip, $client)
     {
+        $key = env('GITHUB_TOKEN');
         $folderContent = json_decode(Http::withHeaders([
-            'Authorization' => 'Bearer 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'
+            'Authorization' => "Bearer $key"
         ])->get($folder['url']));
 
         $zip->addEmptyDir($folder['name']);
