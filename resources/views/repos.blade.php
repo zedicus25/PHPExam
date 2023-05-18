@@ -23,11 +23,12 @@
                 </div>
             @endforeach
         </div>
+        @if(key_exists(0, $repos))
+            <a href="{{ route('previousPage',['userName'=> $repos[0]->owner->login]) }}" class="btn btn-outline-warning">Previous</a>
+            <a href="{{ route('nextPage',['userName'=> $repos[0]->owner->login]) }}" class="btn btn-outline-warning">Next</a>
+        @endif
     @else
         <div>{{$repos->message}}</div>
     @endif
-
-
-
 
 @endsection

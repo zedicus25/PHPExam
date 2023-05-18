@@ -12,6 +12,8 @@
 <div class="container">
     @yield('repos')
     @yield('files')
+    @yield('error')
+    @yield('success')
 </div>
 </body>
 </html>
